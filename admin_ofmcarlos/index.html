@@ -7,6 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="../shared-data.js"></script>
     <style>
         * {
             margin: 0;
@@ -467,7 +468,8 @@
         let clicksChart, countriesChart;
 
         function loadDashboardData() {
-            const visitorData = JSON.parse(localStorage.getItem('visitorData') || '[]');
+            const visitorData = window.SharedDataManager.getVisitorData();
+            console.log('📊 Cargando datos del dashboard:', visitorData.length, 'visitantes');
             updateStatistics(visitorData);
             createCharts(visitorData);
             populateCountryList(visitorData);
@@ -611,7 +613,7 @@
                 countryCounts[country] = (countryCounts[country] || 0) + 1;
             });
 
-            const blockedCountries = JSON.parse(localStorage.getItem('blockedCountries') || '[]');
+            const blockedCountries = window.SharedDataManager.getBlockedCountries();
             const countryList = document.getElementById('countryList');
             
             countryList.innerHTML = '';
@@ -655,18 +657,14 @@
         }
 
         function toggleCountryBlock(countryCode, countryName) {
-            const blockedCountries = JSON.parse(localStorage.getItem('blockedCountries') || '[]');
-            const index = blockedCountries.indexOf(countryCode);
+            const isBlocked = window.SharedDataManager.toggleCountryBlock(countryCode);
             
-            if (index > -1) {
-                blockedCountries.splice(index, 1);
-                alert(`${countryName} ha sido desbloqueado`);
-            } else {
-                blockedCountries.push(countryCode);
+            if (isBlocked) {
                 alert(`${countryName} ha sido bloqueado`);
+            } else {
+                alert(`${countryName} ha sido desbloqueado`);
             }
             
-            localStorage.setItem('blockedCountries', JSON.stringify(blockedCountries));
             loadDashboardData(); // Refresh the display
         }
 
@@ -722,6 +720,19 @@
                 loadDashboardData();
             }
         }, 30000);
+
+        // Escuchar actualizaciones en tiempo real
+        window.SharedDataManager.listenForUpdates(function(updateData) {
+            console.log('🔄 Actualización recibida:', updateData);
+            if (document.getElementById('dashboard').style.display === 'block') {
+                loadDashboardData();
+            }
+        });
+
+        // Inicializar el sistema cuando se carga el panel
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Panel de administración inicializado');
+        });
     </script>
 </body>
 </html>
