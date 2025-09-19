@@ -1,0 +1,102 @@
+🚀 SISTEMA DE REDIRECCIÓN Y ANALYTICS - NATASHA SAMMY
+=====================================================
+
+✅ ARCHIVOS CREADOS:
+-------------------
+1. index.html                    - Página principal con redirección automática
+2. admin_ofmcarlos/index.html     - Panel de administración con dashboard
+3. .htaccess                     - Configuración del servidor web
+4. config.js                     - Configuración global del sistema
+5. README.md                     - Documentación completa
+6. INSTRUCCIONES.txt             - Este archivo
+
+🔧 CONFIGURACIÓN DEL SERVIDOR:
+------------------------------
+1. Sube TODOS los archivos al directorio raíz de tu dominio natashasammy.us
+2. Asegúrate de que el servidor tenga Apache con mod_rewrite habilitado
+3. Verifica que el archivo .htaccess esté en la raíz del dominio
+
+🌐 URLs DE ACCESO:
+-----------------
+• Página principal: https://natashasammy.us/
+• Panel de admin:   https://natashasammy.us/admin_ofmcarlos
+
+🔐 CREDENCIALES:
+---------------
+Usuario:    admin
+Contraseña: 1234
+
+📊 FUNCIONALIDADES PRINCIPALES:
+-------------------------------
+✓ Redirección automática a OnlyFans
+✓ Tracking completo de visitantes
+✓ Geolocalización por IP con API externa
+✓ Sistema de bloqueo por países
+✓ Dashboard con métricas en tiempo real
+✓ Gráficas interactivas de estadísticas
+✓ Tabla de visitantes con detalles completos
+✓ Control de acceso por países
+✓ Diseño responsive y moderno
+✓ Actualización automática cada 30 segundos
+
+📈 MÉTRICAS DISPONIBLES:
+-----------------------
+• Total de clics
+• Visitantes únicos (por IP)
+• Países activos
+• Tasa de conversión estimada
+• Gráfica de clics por día (últimos 7 días)
+• Top 5 países con gráfica de dona
+• Registro detallado de cada visitante
+
+🌍 INFORMACIÓN DE GEOLOCALIZACIÓN:
+---------------------------------
+• IP del visitante
+• País, región y ciudad
+• Coordenadas geográficas
+• Zona horaria
+• Tipo de dispositivo
+• Navegador y sistema operativo
+• Página de referencia
+
+🔒 SISTEMA DE BLOQUEO:
+---------------------
+• Bloquear/desbloquear países desde el panel de admin
+• Los países bloqueados ven un mensaje de acceso restringido
+• Configuración persistente en localStorage
+
+💾 ALMACENAMIENTO DE DATOS:
+--------------------------
+• Datos almacenados localmente en el navegador
+• Límite de 1000 registros (se auto-limpia)
+• No requiere base de datos externa
+• Exportación manual disponible
+
+🚀 TECNOLOGÍAS UTILIZADAS:
+-------------------------
+• HTML5, CSS3, JavaScript ES6+
+• Chart.js para gráficas
+• Font Awesome para iconos
+• API ipapi.co para geolocalización
+• localStorage para persistencia
+
+⚡ OPTIMIZACIONES:
+-----------------
+• Compresión GZIP habilitada
+• Headers de seguridad configurados
+• Caché para archivos estáticos
+• Diseño completamente responsive
+• Carga asíncrona de recursos
+
+🔧 MANTENIMIENTO:
+----------------
+• Auto-limpieza de datos antiguos
+• Actualización automática del dashboard
+• Sistema de logs integrado
+• Backup automático en localStorage
+
+📞 SOPORTE:
+----------
+Para modificaciones o soporte técnico, contacta al desarrollador.
+
+¡SISTEMA LISTO PARA USAR! 🎉

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natasha Sammy</title>
+    <meta name="description" content="Natasha Sammy - Contenido exclusivo">
+    <script src="config.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .loading-container {
+            text-align: center;
+            color: white;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .sub-message {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <!-- Redirección invisible sin mostrar contenido -->
+
+    <script>
+        // Función para obtener información del visitante
+        function trackVisitor() {
+            const visitorData = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                screen: {
+                    width: screen.width,
+                    height: screen.height
+                },
+                referrer: document.referrer,
+                url: window.location.href
+            };
+
+            // Obtener geolocalización si es posible
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        visitorData.location = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        saveVisitorData(visitorData);
+                    },
+                    function() {
+                        // Si no se puede obtener ubicación, usar IP geolocation
+                        getIPGeolocation(visitorData);
+                    }
+                );
+            } else {
+                getIPGeolocation(visitorData);
+            }
+        }
+
+        // Función para obtener geolocalización por IP
+        async function getIPGeolocation(visitorData) {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                
+                visitorData.ipLocation = {
+                    ip: data.ip,
+                    country: data.country_name,
+                    countryCode: data.country_code,
+                    region: data.region,
+                    city: data.city,
+                    latitude: data.latitude,
+                    longitude: data.longitude,
+                    timezone: data.timezone
+                };
+                
+                // Verificar si el país está bloqueado
+                if (isCountryBlocked(data.country_code)) {
+                    showBlockedMessage();
+                    return;
+                }
+                
+            } catch (error) {
+                console.log('No se pudo obtener geolocalización por IP');
+            }
+            
+            saveVisitorData(visitorData);
+        }
+
+        // Función para verificar si un país está bloqueado
+        function isCountryBlocked(countryCode) {
+            const blockedCountries = JSON.parse(localStorage.getItem('blockedCountries') || '[]');
+            return blockedCountries.includes(countryCode);
+        }
+
+        // Función para mostrar mensaje de país bloqueado
+        function showBlockedMessage() {
+            document.querySelector('.loading-container').innerHTML = `
+                <div style="text-align: center; color: white;">
+                    <h2>🚫 Acceso Restringido</h2>
+                    <p>El acceso desde tu ubicación no está permitido.</p>
+                    <p>Si crees que esto es un error, contacta al administrador.</p>
+                </div>
+            `;
+        }
+
+        // Función para guardar datos del visitante
+        function saveVisitorData(data) {
+            // Obtener datos existentes
+            const existingData = JSON.parse(localStorage.getItem('visitorData') || '[]');
+            
+            // Agregar nuevos datos
+            existingData.push(data);
+            
+            // Mantener solo los últimos 1000 registros para no sobrecargar el localStorage
+            if (existingData.length > 1000) {
+                existingData.splice(0, existingData.length - 1000);
+            }
+            
+            // Guardar en localStorage
+            localStorage.setItem('visitorData', JSON.stringify(existingData));
+            
+            // Proceder con la redirección
+            redirectToTarget();
+        }
+
+        // Función para redireccionar inmediatamente
+        function redirectToTarget() {
+            window.location.href = 'https://onlyfans.com/natashasammy/c99';
+        }
+
+        // Iniciar tracking cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            trackVisitor();
+        });
+
+        // Backup redirect inmediato en caso de que algo falle
+        setTimeout(() => {
+            if (window.location.href.includes('index.html') || window.location.pathname === '/') {
+                window.location.href = 'https://onlyfans.com/natashasammy/c99';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
