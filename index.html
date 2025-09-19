@@ -7,6 +7,7 @@
     <meta name="description" content="Natasha Sammy - Contenido exclusivo">
     <script src="config.js"></script>
     <script src="shared-data.js"></script>
+    <script src="database-manager.js"></script>
     <style>
         body {
             margin: 0;
@@ -93,7 +94,8 @@
                     };
                     
                     // Verificar si el país está bloqueado
-                    if (isCountryBlocked(data.country_code)) {
+                    const blocked = await isCountryBlocked(data.country_code);
+                    if (blocked) {
                         showBlockedMessage();
                         return;
                     }
@@ -116,9 +118,14 @@
             saveVisitorData(visitorData);
         }
 
-        // Función para verificar si un país está bloqueado
-        function isCountryBlocked(countryCode) {
-            return window.SharedDataManager.isCountryBlocked(countryCode);
+        // Función para verificar si un país está bloqueado (ahora usando base de datos)
+        async function isCountryBlocked(countryCode) {
+            try {
+                return await window.DatabaseManager.isCountryBlocked(countryCode);
+            } catch (error) {
+                console.log('Error verificando país bloqueado, permitiendo acceso');
+                return false;
+            }
         }
 
         // Función para mostrar mensaje de país bloqueado
@@ -132,15 +139,25 @@
             `;
         }
 
-        // Función para guardar datos del visitante
-        function saveVisitorData(data) {
-            // Usar el sistema de datos compartido
-            const success = window.SharedDataManager.addVisitor(data);
-            
-            if (success) {
-                console.log('✅ Datos del visitante guardados correctamente');
-            } else {
-                console.error('❌ Error al guardar datos del visitante');
+        // Función para guardar datos del visitante (ahora en base de datos centralizada)
+        async function saveVisitorData(data) {
+            try {
+                // Guardar en base de datos centralizada
+                const success = await window.DatabaseManager.sendVisitorData(data);
+                
+                if (success) {
+                    console.log('✅ Datos enviados a la base de datos centralizada');
+                } else {
+                    console.log('⚠️ Datos guardados en backup local');
+                }
+                
+                // También guardar en local como backup
+                window.SharedDataManager.addVisitor(data);
+                
+            } catch (error) {
+                console.error('❌ Error al guardar datos:', error);
+                // Guardar solo en local si falla la base de datos
+                window.SharedDataManager.addVisitor(data);
             }
             
             // Proceder con la redirección

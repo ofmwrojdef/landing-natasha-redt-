@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
     <script src="../shared-data.js"></script>
+    <script src="../database-manager.js"></script>
     <style>
         * {
             margin: 0;
@@ -408,6 +409,15 @@
                 <button onclick="refreshData()" class="refresh-btn">
                     <i class="fas fa-sync-alt"></i> Actualizar Datos
                 </button>
+                <button onclick="debugData()" class="refresh-btn" style="background: #007bff; margin-left: 10px;">
+                    <i class="fas fa-bug"></i> Debug Datos
+                </button>
+                <button onclick="clearAllData()" class="refresh-btn" style="background: #dc3545; margin-left: 10px;">
+                    <i class="fas fa-trash"></i> Limpiar Datos
+                </button>
+                <button onclick="testDatabaseConnection()" class="refresh-btn" style="background: #28a745; margin-left: 10px;">
+                    <i class="fas fa-database"></i> Test DB
+                </button>
                 <div class="country-list" id="countryList">
                     <!-- Countries will be populated by JavaScript -->
                 </div>
@@ -467,49 +477,52 @@
         // Dashboard functionality
         let clicksChart, countriesChart;
 
-        function loadDashboardData() {
-            const visitorData = window.SharedDataManager.getVisitorData();
-            console.log('📊 Cargando datos del dashboard:', visitorData.length, 'visitantes');
-            updateStatistics(visitorData);
-            createCharts(visitorData);
-            populateCountryList(visitorData);
-            populateVisitorTable(visitorData);
-        }
-
-        function updateStatistics(data) {
-            const totalClicks = data.length;
-            const uniqueVisitors = new Set(data.map(v => v.ipLocation?.ip || 'unknown')).size;
-            const activeCountries = new Set(data.map(v => v.ipLocation?.country || 'Unknown')).size;
-            
-            // Calcular clics de hoy
-            const today = new Date().toISOString().split('T')[0];
-            const todayClicks = data.filter(v => v.timestamp.split('T')[0] === today).length;
-
-            document.getElementById('totalClicks').textContent = totalClicks;
-            document.getElementById('uniqueVisitors').textContent = uniqueVisitors;
-            document.getElementById('activeCountries').textContent = activeCountries;
-            document.getElementById('todayClicks').textContent = todayClicks;
-        }
-
-        function createCharts(data) {
-            // Clicks by day chart
-            const last7Days = [];
-            const clicksByDay = {};
-            
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const dateStr = date.toISOString().split('T')[0];
-                last7Days.push(dateStr);
-                clicksByDay[dateStr] = 0;
+        async function loadDashboardData() {
+            try {
+                console.log('📊 Cargando datos desde la base de datos centralizada...');
+                
+                // Obtener estadísticas desde la base de datos
+                const stats = await window.DatabaseManager.getStatistics();
+                
+                console.log('📊 Datos obtenidos:', stats.totalClicks, 'visitantes totales');
+                
+                updateStatistics(stats);
+                createCharts(stats);
+                populateCountryList(stats.allVisitors);
+                populateVisitorTable(stats.allVisitors);
+                
+            } catch (error) {
+                console.error('❌ Error cargando datos:', error);
+                
+                // Fallback a datos locales
+                const localData = window.SharedDataManager.getVisitorData();
+                console.log('📊 Usando datos locales como fallback:', localData.length, 'visitantes');
+                
+                updateStatistics({
+                    totalClicks: localData.length,
+                    uniqueVisitors: new Set(localData.map(v => v.ipLocation?.ip)).size,
+                    activeCountries: new Set(localData.map(v => v.ipLocation?.country)).size,
+                    todayClicks: localData.filter(v => v.timestamp.split('T')[0] === new Date().toISOString().split('T')[0]).length,
+                    allVisitors: localData
+                });
+                createCharts({ allVisitors: localData });
+                populateCountryList(localData);
+                populateVisitorTable(localData);
             }
+        }
 
-            data.forEach(visitor => {
-                const date = visitor.timestamp.split('T')[0];
-                if (clicksByDay.hasOwnProperty(date)) {
-                    clicksByDay[date]++;
-                }
-            });
+        function updateStatistics(stats) {
+            // Las estadísticas ya vienen calculadas desde la base de datos
+            document.getElementById('totalClicks').textContent = stats.totalClicks || 0;
+            document.getElementById('uniqueVisitors').textContent = stats.uniqueVisitors || 0;
+            document.getElementById('activeCountries').textContent = stats.activeCountries || 0;
+            document.getElementById('todayClicks').textContent = stats.todayClicks || 0;
+        }
+
+        function createCharts(stats) {
+            // Usar datos ya procesados desde la base de datos
+            const clicksByDay = stats.clicksByDay || {};
+            const last7Days = Object.keys(clicksByDay);
 
             const ctx1 = document.getElementById('clicksChart').getContext('2d');
             if (clicksChart) clicksChart.destroy();
@@ -548,16 +561,8 @@
                 }
             });
 
-            // Countries chart
-            const countryCounts = {};
-            data.forEach(visitor => {
-                const country = visitor.ipLocation?.country || 'Sin ubicación';
-                countryCounts[country] = (countryCounts[country] || 0) + 1;
-            });
-
-            const sortedCountries = Object.entries(countryCounts)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 5);
+            // Countries chart - usar datos ya procesados
+            const sortedCountries = stats.topCountries || [];
 
             const ctx2 = document.getElementById('countriesChart').getContext('2d');
             if (countriesChart) countriesChart.destroy();
@@ -598,7 +603,7 @@
             }
         }
 
-        function populateCountryList(data) {
+        async function populateCountryList(data) {
             const countryCounts = {};
             const countryFlags = {
                 'Spain': '🇪🇸', 'United States': '🇺🇸', 'Mexico': '🇲🇽', 'Argentina': '🇦🇷',
@@ -613,7 +618,7 @@
                 countryCounts[country] = (countryCounts[country] || 0) + 1;
             });
 
-            const blockedCountries = window.SharedDataManager.getBlockedCountries();
+            const blockedCountries = await window.DatabaseManager.getBlockedCountries();
             const countryList = document.getElementById('countryList');
             
             countryList.innerHTML = '';
@@ -656,16 +661,30 @@
             return countryCodes[countryName] || 'XX';
         }
 
-        function toggleCountryBlock(countryCode, countryName) {
-            const isBlocked = window.SharedDataManager.toggleCountryBlock(countryCode);
-            
-            if (isBlocked) {
-                alert(`${countryName} ha sido bloqueado`);
-            } else {
-                alert(`${countryName} ha sido desbloqueado`);
+        async function toggleCountryBlock(countryCode, countryName) {
+            try {
+                // Obtener países bloqueados actuales desde la base de datos
+                const blockedCountries = await window.DatabaseManager.getBlockedCountries();
+                const index = blockedCountries.indexOf(countryCode);
+                
+                if (index > -1) {
+                    // Desbloquear
+                    blockedCountries.splice(index, 1);
+                    await window.DatabaseManager.updateBlockedCountries(blockedCountries);
+                    alert(`${countryName} ha sido desbloqueado`);
+                } else {
+                    // Bloquear
+                    blockedCountries.push(countryCode);
+                    await window.DatabaseManager.updateBlockedCountries(blockedCountries);
+                    alert(`${countryName} ha sido bloqueado`);
+                }
+                
+                loadDashboardData(); // Refresh the display
+                
+            } catch (error) {
+                console.error('Error actualizando país bloqueado:', error);
+                alert('Error al actualizar el bloqueo del país');
             }
-            
-            loadDashboardData(); // Refresh the display
         }
 
         function populateVisitorTable(data) {
@@ -712,6 +731,124 @@
         function refreshData() {
             loadDashboardData();
             alert('Datos actualizados correctamente');
+        }
+
+        // Función de debug para ver qué datos tenemos almacenados
+        function debugData() {
+            console.log('🔍 INICIANDO DEBUG DE DATOS');
+            
+            // Verificar localStorage
+            const localStorageData = localStorage.getItem('natashasammy_visitor_data');
+            const oldLocalStorageData = localStorage.getItem('visitorData');
+            const sessionStorageData = sessionStorage.getItem('natashasammy_visitor_data');
+            const blockedCountries = localStorage.getItem('natashasammy_blocked_countries');
+            
+            console.log('📊 LocalStorage (nueva clave):', localStorageData);
+            console.log('📊 LocalStorage (clave antigua):', oldLocalStorageData);
+            console.log('📊 SessionStorage:', sessionStorageData);
+            console.log('🚫 Países bloqueados:', blockedCountries);
+            
+            // Usar el sistema de datos compartido
+            const sharedData = window.SharedDataManager ? window.SharedDataManager.getVisitorData() : null;
+            console.log('🔄 Sistema compartido:', sharedData);
+            
+            // Mostrar información en pantalla
+            let debugInfo = `
+DATOS DE DEBUG:
+===============
+
+LocalStorage (nueva clave): ${localStorageData ? JSON.parse(localStorageData).length + ' registros' : 'VACÍO'}
+LocalStorage (clave antigua): ${oldLocalStorageData ? JSON.parse(oldLocalStorageData).length + ' registros' : 'VACÍO'}
+SessionStorage: ${sessionStorageData ? JSON.parse(sessionStorageData).length + ' registros' : 'VACÍO'}
+Sistema Compartido: ${sharedData ? sharedData.length + ' registros' : 'ERROR O VACÍO'}
+Países Bloqueados: ${blockedCountries ? JSON.parse(blockedCountries).length + ' países' : 'VACÍO'}
+
+¿Hay datos en algún lugar? ${(localStorageData || oldLocalStorageData || sessionStorageData) ? 'SÍ' : 'NO'}
+            `;
+            
+            alert(debugInfo);
+            
+            // Si hay datos en localStorage viejo, migrarlos
+            if (oldLocalStorageData && !localStorageData) {
+                console.log('🔄 Migrando datos del localStorage antiguo...');
+                localStorage.setItem('natashasammy_visitor_data', oldLocalStorageData);
+                sessionStorage.setItem('natashasammy_visitor_data', oldLocalStorageData);
+                alert('✅ Datos migrados del almacenamiento antiguo');
+                loadDashboardData();
+            }
+        }
+
+        // Función para limpiar todos los datos
+        function clearAllData() {
+            if (confirm('¿Estás seguro de que quieres eliminar TODOS los datos? Esta acción no se puede deshacer.')) {
+                localStorage.removeItem('natashasammy_visitor_data');
+                localStorage.removeItem('visitorData');
+                localStorage.removeItem('natashasammy_blocked_countries');
+                localStorage.removeItem('blockedCountries');
+                sessionStorage.removeItem('natashasammy_visitor_data');
+                sessionStorage.removeItem('visitorData');
+                
+                alert('🗑️ Todos los datos han sido eliminados');
+                loadDashboardData();
+            }
+        }
+
+        // Función para crear datos de prueba
+        function createTestData() {
+            const testData = [
+                {
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    referrer: 'https://google.com',
+                    ipLocation: {
+                        ip: '192.168.1.100',
+                        country: 'Spain',
+                        countryCode: 'ES',
+                        region: 'Madrid',
+                        city: 'Madrid',
+                        latitude: 40.4168,
+                        longitude: -3.7038
+                    }
+                },
+                {
+                    timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hora atrás
+                    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)',
+                    language: 'es-ES',
+                    referrer: 'https://twitter.com',
+                    ipLocation: {
+                        ip: '192.168.1.101',
+                        country: 'Mexico',
+                        countryCode: 'MX',
+                        region: 'CDMX',
+                        city: 'Mexico City',
+                        latitude: 19.4326,
+                        longitude: -99.1332
+                    }
+                }
+            ];
+            
+            window.SharedDataManager.saveVisitorData(testData);
+            alert('✅ Datos de prueba creados');
+            loadDashboardData();
+        }
+
+        // Función para probar la conexión con la base de datos
+        async function testDatabaseConnection() {
+            try {
+                console.log('🔄 Probando conexión con la base de datos...');
+                const isConnected = await window.DatabaseManager.testConnection();
+                
+                if (isConnected) {
+                    alert('✅ Conexión con la base de datos exitosa');
+                } else {
+                    alert('❌ No se pudo conectar con la base de datos');
+                }
+                
+            } catch (error) {
+                console.error('Error probando conexión:', error);
+                alert('❌ Error al probar la conexión: ' + error.message);
+            }
         }
 
         // Auto-refresh every 30 seconds if dashboard is visible
