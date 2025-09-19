@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Natasha Sammy</title>
     <meta name="description" content="Natasha Sammy - Contenido exclusivo">
-    <script src="config.js"></script>
-    <script src="shared-data.js"></script>
-    <script src="database-manager.js"></script>
+    <script src="simple-api.js"></script>
     <style>
         body {
             margin: 0;
@@ -118,14 +116,9 @@
             saveVisitorData(visitorData);
         }
 
-        // Función para verificar si un país está bloqueado (ahora usando base de datos)
+        // Función para verificar si un país está bloqueado
         async function isCountryBlocked(countryCode) {
-            try {
-                return await window.DatabaseManager.isCountryBlocked(countryCode);
-            } catch (error) {
-                console.log('Error verificando país bloqueado, permitiendo acceso');
-                return false;
-            }
+            return await window.SimpleAPI.isCountryBlocked(countryCode);
         }
 
         // Función para mostrar mensaje de país bloqueado
@@ -139,25 +132,15 @@
             `;
         }
 
-        // Función para guardar datos del visitante (ahora en base de datos centralizada)
+        // Función para guardar datos del visitante
         async function saveVisitorData(data) {
-            try {
-                // Guardar en base de datos centralizada
-                const success = await window.DatabaseManager.sendVisitorData(data);
-                
-                if (success) {
-                    console.log('✅ Datos enviados a la base de datos centralizada');
-                } else {
-                    console.log('⚠️ Datos guardados en backup local');
-                }
-                
-                // También guardar en local como backup
-                window.SharedDataManager.addVisitor(data);
-                
-            } catch (error) {
-                console.error('❌ Error al guardar datos:', error);
-                // Guardar solo en local si falla la base de datos
-                window.SharedDataManager.addVisitor(data);
+            // Enviar datos a la base de datos
+            const success = await window.SimpleAPI.sendVisitorData(data);
+            
+            if (success) {
+                console.log('✅ Datos guardados correctamente');
+            } else {
+                console.log('⚠️ Error guardando datos');
             }
             
             // Proceder con la redirección

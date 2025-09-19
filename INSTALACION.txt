@@ -1,0 +1,117 @@
+🚀 INSTALACIÓN DEL SISTEMA DE REDIRECCIÓN Y ANALYTICS
+======================================================
+
+📁 ARCHIVOS INCLUIDOS:
+-----------------------
+✅ index.html                    - Página principal con redirección
+✅ admin_ofmcarlos/index.html     - Panel de administración
+✅ api.php                       - API de base de datos (PHP)
+✅ simple-api.js                  - Cliente JavaScript para la API
+✅ .htaccess                     - Configuración del servidor
+✅ INSTALACION.txt               - Este archivo
+
+🔧 REQUISITOS DEL SERVIDOR:
+---------------------------
+• Servidor web Apache
+• PHP 7.0 o superior
+• Mod_rewrite habilitado
+• Permisos de escritura en el directorio
+
+📂 INSTRUCCIONES DE INSTALACIÓN:
+--------------------------------
+1. Sube TODOS los archivos al directorio raíz de tu dominio natashasammy.us
+
+2. Asegúrate de que el servidor tenga permisos de escritura:
+   chmod 755 /directorio-del-sitio
+   chmod 755 api.php
+
+3. El directorio 'data' se creará automáticamente cuando llegue el primer visitante
+
+4. Verifica que el archivo .htaccess esté en la raíz del dominio
+
+🌐 URLs DE ACCESO:
+------------------
+• Página principal: https://natashasammy.us/
+• Panel de admin:   https://natashasammy.us/admin_ofmcarlos
+
+🔐 CREDENCIALES DE ACCESO:
+-------------------------
+Usuario:    admin
+Contraseña: 1234
+
+📊 FUNCIONALIDADES:
+------------------
+✅ Redirección automática a OnlyFans
+✅ Tracking de visitantes con geolocalización por IP
+✅ Sistema de bloqueo por países
+✅ Dashboard con métricas en tiempo real
+✅ Gráficas de estadísticas por día y país
+✅ Base de datos propia (sin servicios externos)
+✅ Almacenamiento en archivos JSON seguros
+
+💾 ALMACENAMIENTO DE DATOS:
+--------------------------
+• Los datos se guardan en: data/visitors.json
+• Países bloqueados en: data/blocked_countries.json
+• Límite automático: 5000 visitantes máximo
+• Limpieza automática: datos de más de 30 días
+
+🛡️ SEGURIDAD:
+-------------
+• El directorio 'data' está protegido por .htaccess
+• No se puede acceder directamente a los archivos JSON
+• Solo la API PHP puede leer/escribir los datos
+
+⚡ FUNCIONAMIENTO:
+-----------------
+1. Visitante entra a natashasammy.us
+2. Se muestra ruedecita de carga (1-3 segundos)
+3. Se obtiene geolocalización por IP
+4. Se verifican países bloqueados
+5. Se guardan datos en la base de datos
+6. Redirección automática a OnlyFans
+
+📈 PANEL DE ADMINISTRACIÓN:
+--------------------------
+• Estadísticas en tiempo real
+• Total de clics y visitantes únicos
+• Países activos y clics de hoy
+• Gráfica de clics por día (últimos 7 días)
+• Top 5 países con gráfica de dona
+• Tabla de visitantes con detalles completos
+• Control de bloqueo/desbloqueo por países
+
+🔄 MANTENIMIENTO AUTOMÁTICO:
+---------------------------
+• Límite de 5000 registros (se eliminan los más antiguos)
+• Limpieza automática de datos de más de 30 días
+• No requiere intervención manual
+
+🆘 SOLUCIÓN DE PROBLEMAS:
+------------------------
+Si no aparecen datos en el dashboard:
+1. Verifica que PHP esté funcionando
+2. Comprueba permisos de escritura en el directorio
+3. Asegúrate de que el archivo api.php sea accesible
+4. Revisa los logs del servidor para errores
+
+Si la redirección no funciona:
+1. Verifica que .htaccess esté en la raíz
+2. Confirma que mod_rewrite esté habilitado
+3. Comprueba la configuración del dominio
+
+📞 CARACTERÍSTICAS TÉCNICAS:
+---------------------------
+• Sin dependencias externas
+• Base de datos en archivos JSON locales
+• API REST simple con PHP
+• Frontend con JavaScript vanilla
+• Totalmente responsive
+• Optimizado para velocidad
+
+¡SISTEMA LISTO PARA USAR! 🎉
+
+Después de subir los archivos, simplemente visita:
+https://natashasammy.us/admin_ofmcarlos
+
+Y comienza a recibir estadísticas de todos tus visitantes.

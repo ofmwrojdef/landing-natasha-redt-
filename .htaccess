@@ -11,6 +11,12 @@ RewriteRule ^$ /index.html [L]
 RewriteCond %{REQUEST_URI} ^/admin_ofmcarlos/?$
 RewriteRule ^admin_ofmcarlos/?$ /admin_ofmcarlos/index.html [L]
 
+# Proteger el directorio de datos
+<Files "data/*">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
 # Configuración de seguridad
 <Files ".htaccess">
 Order Allow,Deny
