@@ -7,7 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
-    <script src="../simple-api.js"></script>
+    <script src="../github-db.js"></script>
     <style>
         * {
             margin: 0;
@@ -408,6 +408,9 @@
                 <button onclick="refreshData()" class="refresh-btn">
                     <i class="fas fa-sync-alt"></i> Actualizar Datos
                 </button>
+                <button onclick="exportToGitHub()" class="refresh-btn" style="background: #28a745; margin-left: 10px;">
+                    <i class="fab fa-github"></i> Exportar a GitHub
+                </button>
                 <div class="country-list" id="countryList">
                     <!-- Countries will be populated by JavaScript -->
                 </div>
@@ -468,10 +471,10 @@
         let clicksChart, countriesChart;
 
         async function loadDashboardData() {
-            console.log('📊 Cargando datos...');
+            console.log('📊 Cargando datos desde GitHub Pages...');
             
-            // Obtener estadísticas desde la API
-            const stats = await window.SimpleAPI.getStatistics();
+            // Obtener estadísticas desde el sistema GitHub
+            const stats = await window.GitHubDB.getStatistics();
             
             console.log('📊 Datos obtenidos:', stats.totalClicks, 'visitantes totales');
             
@@ -588,7 +591,7 @@
                 countryCounts[country] = (countryCounts[country] || 0) + 1;
             });
 
-            const blockedCountries = await window.SimpleAPI.getBlockedCountries();
+            const blockedCountries = await window.GitHubDB.getBlockedCountries();
             const countryList = document.getElementById('countryList');
             
             countryList.innerHTML = '';
@@ -633,18 +636,18 @@
 
         async function toggleCountryBlock(countryCode, countryName) {
             // Obtener países bloqueados actuales
-            const blockedCountries = await window.SimpleAPI.getBlockedCountries();
+            const blockedCountries = await window.GitHubDB.getBlockedCountries();
             const index = blockedCountries.indexOf(countryCode);
             
             if (index > -1) {
                 // Desbloquear
                 blockedCountries.splice(index, 1);
-                await window.SimpleAPI.updateBlockedCountries(blockedCountries);
+                window.GitHubDB.updateBlockedCountries(blockedCountries);
                 alert(`${countryName} ha sido desbloqueado`);
             } else {
                 // Bloquear
                 blockedCountries.push(countryCode);
-                await window.SimpleAPI.updateBlockedCountries(blockedCountries);
+                window.GitHubDB.updateBlockedCountries(blockedCountries);
                 alert(`${countryName} ha sido bloqueado`);
             }
             
@@ -695,6 +698,56 @@
         function refreshData() {
             loadDashboardData();
             alert('Datos actualizados correctamente');
+        }
+
+        // Función para exportar datos a GitHub
+        function exportToGitHub() {
+            const updateInfo = window.GitHubDB.generateUpdateInstructions();
+            
+            // Crear ventana modal con las instrucciones
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 10000; display: flex;
+                justify-content: center; align-items: center; padding: 20px;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 10px; padding: 30px; max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                    <h3>📤 Exportar Datos a GitHub</h3>
+                    <p style="margin: 15px 0;">Para sincronizar los datos con GitHub Pages:</p>
+                    <ol style="margin: 15px 0; padding-left: 20px;">
+                        <li>Ve a tu repositorio de GitHub</li>
+                        <li>Crea o edita el archivo <strong>data.json</strong></li>
+                        <li>Copia el contenido de abajo y pégalo en el archivo</li>
+                        <li>Haz commit de los cambios</li>
+                    </ol>
+                    <textarea readonly style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; margin: 15px 0; padding: 10px; border: 1px solid #ccc;">${updateInfo.content}</textarea>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                        <button onclick="copyToClipboard('${updateInfo.content.replace(/'/g, "\\'")}'); alert('¡Copiado al portapapeles!')" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">
+                            📋 Copiar
+                        </button>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">
+                            ❌ Cerrar
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // Función auxiliar para copiar al portapapeles
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).catch(() => {
+                // Fallback para navegadores antiguos
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            });
         }
 
 

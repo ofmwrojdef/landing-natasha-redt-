@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Natasha Sammy</title>
     <meta name="description" content="Natasha Sammy - Contenido exclusivo">
-    <script src="simple-api.js"></script>
+    <script src="github-db.js"></script>
     <style>
         body {
             margin: 0;
@@ -118,7 +118,7 @@
 
         // Función para verificar si un país está bloqueado
         async function isCountryBlocked(countryCode) {
-            return await window.SimpleAPI.isCountryBlocked(countryCode);
+            return await window.GitHubDB.isCountryBlocked(countryCode);
         }
 
         // Función para mostrar mensaje de país bloqueado
@@ -133,12 +133,12 @@
         }
 
         // Función para guardar datos del visitante
-        async function saveVisitorData(data) {
-            // Enviar datos a la base de datos
-            const success = await window.SimpleAPI.sendVisitorData(data);
+        function saveVisitorData(data) {
+            // Guardar datos en localStorage (GitHub Pages)
+            const success = window.GitHubDB.saveVisitor(data);
             
             if (success) {
-                console.log('✅ Datos guardados correctamente');
+                console.log('✅ Datos guardados en localStorage');
             } else {
                 console.log('⚠️ Error guardando datos');
             }
