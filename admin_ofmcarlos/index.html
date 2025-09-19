@@ -7,7 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
-    <script src="../github-db.js"></script>
+    <script src="../real-database.js"></script>
     <style>
         * {
             margin: 0;
@@ -471,17 +471,85 @@
         let clicksChart, countriesChart;
 
         async function loadDashboardData() {
-            console.log('📊 Cargando datos desde GitHub Pages...');
+            console.log('📊 Cargando datos...');
             
-            // Obtener estadísticas desde el sistema GitHub
-            const stats = await window.GitHubDB.getStatistics();
+            try {
+                // Obtener datos REALES desde la base de datos
+                const stats = await window.RealDatabase.getStatistics();
+                const visitors = stats.allVisitors || [];
+                
+                console.log('📊 Datos REALES desde Supabase:', visitors.length, 'visitantes');
+                
+                // Usar estadísticas ya calculadas desde la base de datos
+                updateStatistics(stats);
+                createCharts(stats);
+                populateCountryList(visitors);
+                populateVisitorTable(visitors);
+                
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                // Mostrar datos vacíos en caso de error
+                updateStatistics({
+                    totalClicks: 0,
+                    uniqueVisitors: 0,
+                    activeCountries: 0,
+                    todayClicks: 0
+                });
+            }
+        }
+        
+        // Función para calcular estadísticas rápido
+        function calculateQuickStats(visitors) {
+            if (!visitors || visitors.length === 0) {
+                return {
+                    totalClicks: 0,
+                    uniqueVisitors: 0,
+                    activeCountries: 0,
+                    todayClicks: 0,
+                    clicksByDay: {},
+                    topCountries: [],
+                    allVisitors: []
+                };
+            }
             
-            console.log('📊 Datos obtenidos:', stats.totalClicks, 'visitantes totales');
+            const totalClicks = visitors.length;
+            const uniqueIPs = new Set(visitors.map(v => v.ip || 'unknown')).size;
+            const countries = new Set(visitors.filter(v => v.country && v.country !== 'Sin ubicación').map(v => v.country));
+            const activeCountries = countries.size;
             
-            updateStatistics(stats);
-            createCharts(stats);
-            populateCountryList(stats.allVisitors);
-            populateVisitorTable(stats.allVisitors);
+            // Clics de hoy
+            const today = new Date().toISOString().split('T')[0];
+            const todayClicks = visitors.filter(v => v.timestamp && v.timestamp.split('T')[0] === today).length;
+            
+            // Últimos 7 días (simple)
+            const last7Days = {};
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                last7Days[dateStr] = visitors.filter(v => v.timestamp && v.timestamp.split('T')[0] === dateStr).length;
+            }
+            
+            // Top países (simple)
+            const countryCounts = {};
+            visitors.forEach(visitor => {
+                const country = visitor.country || 'Sin ubicación';
+                countryCounts[country] = (countryCounts[country] || 0) + 1;
+            });
+            
+            const topCountries = Object.entries(countryCounts)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5);
+            
+            return {
+                totalClicks,
+                uniqueVisitors: uniqueIPs,
+                activeCountries,
+                todayClicks,
+                clicksByDay: last7Days,
+                topCountries,
+                allVisitors: visitors.slice(-50) // Solo últimos 50 para velocidad
+            };
         }
 
         function updateStatistics(stats) {
@@ -493,86 +561,126 @@
         }
 
         function createCharts(stats) {
-            // Usar datos ya procesados desde la base de datos
-            const clicksByDay = stats.clicksByDay || {};
-            const last7Days = Object.keys(clicksByDay);
-
-            const ctx1 = document.getElementById('clicksChart').getContext('2d');
-            if (clicksChart) clicksChart.destroy();
+            // Simplificar al máximo para evitar errores
+            console.log('📈 Creando gráficas...');
             
-            clicksChart = new Chart(ctx1, {
-                type: 'line',
-                data: {
-                    labels: last7Days.map(date => {
-                        const d = new Date(date);
-                        return d.getDate() + '/' + (d.getMonth() + 1);
-                    }),
-                    datasets: [{
-                        label: 'Clics',
-                        data: last7Days.map(date => clicksByDay[date]),
-                        borderColor: '#2a5298',
-                        backgroundColor: 'rgba(42, 82, 152, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true
-                        }
-                    }
+            try {
+                // Gráfica de clics por día - versión simple
+                createClicksChart(stats);
+                
+                // Esperar un poco antes de crear la segunda gráfica
+                setTimeout(() => {
+                    createCountriesChart(stats);
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error general en gráficas:', error);
+            }
+        }
+        
+        function createClicksChart(stats) {
+            try {
+                const clicksByDay = stats.clicksByDay || {};
+                const last7Days = [];
+                const values = [];
+                
+                // Crear días de la semana
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const day = date.getDate() + '/' + (date.getMonth() + 1);
+                    
+                    last7Days.push(day);
+                    values.push(clicksByDay[dateStr] || 0);
                 }
-            });
 
-            // Countries chart - usar datos ya procesados
-            const sortedCountries = stats.topCountries || [];
-
-            const ctx2 = document.getElementById('countriesChart').getContext('2d');
-            if (countriesChart) countriesChart.destroy();
-            
-            // Solo mostrar gráfica si hay datos
-            if (sortedCountries.length > 0) {
-                countriesChart = new Chart(ctx2, {
-                    type: 'doughnut',
+                const ctx1 = document.getElementById('clicksChart');
+                if (!ctx1) return;
+                
+                // Destruir gráfica anterior si existe
+                if (window.clicksChart) {
+                    window.clicksChart.destroy();
+                }
+                
+                window.clicksChart = new Chart(ctx1.getContext('2d'), {
+                    type: 'line',
                     data: {
-                        labels: sortedCountries.map(([country]) => country),
+                        labels: last7Days,
                         datasets: [{
-                            data: sortedCountries.map(([, count]) => count),
-                            backgroundColor: [
-                                '#FF6384',
-                                '#36A2EB',
-                                '#FFCE56',
-                                '#4BC0C0',
-                                '#9966FF'
-                            ]
+                            label: 'Clics',
+                            data: values,
+                            borderColor: '#2a5298',
+                            backgroundColor: 'rgba(42, 82, 152, 0.1)',
+                            tension: 0.4,
+                            fill: true
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
+                        maintainAspectRatio: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1 }
                             }
                         }
                     }
                 });
-            } else {
-                // Mostrar mensaje cuando no hay datos
-                ctx2.font = '16px Arial';
-                ctx2.fillStyle = '#666';
-                ctx2.textAlign = 'center';
-                ctx2.fillText('Sin datos disponibles', ctx2.canvas.width/2, ctx2.canvas.height/2);
+                
+                console.log('✅ Gráfica de clics creada');
+                
+            } catch (error) {
+                console.error('Error en gráfica de clics:', error);
+            }
+        }
+        
+        function createCountriesChart(stats) {
+            try {
+                const sortedCountries = stats.topCountries || [];
+                
+                const ctx2 = document.getElementById('countriesChart');
+                if (!ctx2) return;
+                
+                // Destruir gráfica anterior si existe
+                if (window.countriesChart) {
+                    window.countriesChart.destroy();
+                }
+                
+                if (sortedCountries.length > 0) {
+                    window.countriesChart = new Chart(ctx2.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: sortedCountries.map(([country]) => country),
+                            datasets: [{
+                                data: sortedCountries.map(([, count]) => count),
+                                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                    
+                    console.log('✅ Gráfica de países creada');
+                } else {
+                    // Mostrar mensaje de no datos
+                    const context = ctx2.getContext('2d');
+                    context.clearRect(0, 0, ctx2.width, ctx2.height);
+                    context.font = '16px Arial';
+                    context.fillStyle = '#666';
+                    context.textAlign = 'center';
+                    context.fillText('Sin datos de países', ctx2.width/2, ctx2.height/2);
+                    
+                    console.log('📊 Sin datos de países para mostrar');
+                }
+                
+            } catch (error) {
+                console.error('Error en gráfica de países:', error);
             }
         }
 
@@ -636,18 +744,18 @@
 
         async function toggleCountryBlock(countryCode, countryName) {
             // Obtener países bloqueados actuales
-            const blockedCountries = await window.GitHubDB.getBlockedCountries();
+            const blockedCountries = await window.RealDatabase.getBlockedCountries();
             const index = blockedCountries.indexOf(countryCode);
             
             if (index > -1) {
                 // Desbloquear
                 blockedCountries.splice(index, 1);
-                window.GitHubDB.updateBlockedCountries(blockedCountries);
+                await window.RealDatabase.updateBlockedCountries(blockedCountries);
                 alert(`${countryName} ha sido desbloqueado`);
             } else {
                 // Bloquear
                 blockedCountries.push(countryCode);
-                window.GitHubDB.updateBlockedCountries(blockedCountries);
+                await window.RealDatabase.updateBlockedCountries(blockedCountries);
                 alert(`${countryName} ha sido bloqueado`);
             }
             
@@ -655,34 +763,52 @@
         }
 
         function populateVisitorTable(data) {
-            const tableBody = document.getElementById('visitorTableBody');
-            tableBody.innerHTML = '';
-            
-            if (data.length === 0) {
-                const row = document.createElement('tr');
-                row.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px; color: #666;">No hay visitantes registrados</td>';
-                tableBody.appendChild(row);
-                return;
-            }
-            
-            // Show last 50 visitors
-            const recentVisitors = data.slice(-50).reverse();
-            
-            recentVisitors.forEach(visitor => {
-                const row = document.createElement('tr');
-                const date = new Date(visitor.timestamp);
-                const formattedDate = date.toLocaleDateString('es-ES') + ' ' + date.toLocaleTimeString('es-ES');
+            try {
+                const tableBody = document.getElementById('visitorTableBody');
+                tableBody.innerHTML = '';
                 
-                row.innerHTML = `
-                    <td>${formattedDate}</td>
-                    <td>${visitor.ipLocation?.country || 'Sin ubicación'}</td>
-                    <td>${visitor.ipLocation?.city || 'Sin ciudad'}</td>
-                    <td>${visitor.ipLocation?.ip || 'Sin IP'}</td>
-                    <td>${getDeviceType(visitor.userAgent)}</td>
-                    <td>${visitor.referrer || 'Directo'}</td>
-                `;
-                tableBody.appendChild(row);
-            });
+                if (!data || data.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px; color: #666;">No hay visitantes registrados</td>';
+                    tableBody.appendChild(row);
+                    return;
+                }
+                
+                // Mostrar solo los últimos 20 para mayor velocidad
+                const recentVisitors = data.slice(-20).reverse();
+                
+                recentVisitors.forEach(visitor => {
+                    try {
+                        const row = document.createElement('tr');
+                        
+                        // Formatear fecha de forma segura
+                        let formattedDate = 'Fecha inválida';
+                        if (visitor.timestamp) {
+                            const date = new Date(visitor.timestamp);
+                            if (!isNaN(date.getTime())) {
+                                formattedDate = date.toLocaleDateString('es-ES') + ' ' + date.toLocaleTimeString('es-ES');
+                            }
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${formattedDate}</td>
+                            <td>${visitor.country || 'Sin ubicación'}</td>
+                            <td>${visitor.city || 'Sin ciudad'}</td>
+                            <td>${visitor.ip || 'Sin IP'}</td>
+                            <td>${getDeviceType(visitor.userAgent || '')}</td>
+                            <td>${visitor.referrer || 'Directo'}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    } catch (error) {
+                        console.error('Error procesando visitante:', error);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error poblando tabla:', error);
+                const tableBody = document.getElementById('visitorTableBody');
+                tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">Error cargando datos</td></tr>';
+            }
         }
 
         function getDeviceType(userAgent) {
@@ -696,8 +822,21 @@
         }
 
         function refreshData() {
+            console.log('🔄 Actualizando datos manualmente...');
+            
+            // Mostrar indicador de carga
+            document.getElementById('totalClicks').textContent = '...';
+            document.getElementById('uniqueVisitors').textContent = '...';
+            document.getElementById('activeCountries').textContent = '...';
+            document.getElementById('todayClicks').textContent = '...';
+            
+            // Cargar datos
             loadDashboardData();
-            alert('Datos actualizados correctamente');
+            
+            // Confirmación rápida
+            setTimeout(() => {
+                alert('✅ Datos actualizados');
+            }, 1000);
         }
 
         // Función para exportar datos a GitHub
@@ -751,20 +890,13 @@
         }
 
 
-        // Auto-refresh every 30 seconds if dashboard is visible
+        // Auto-refresh cada hora para máxima estabilidad
         setInterval(() => {
             if (document.getElementById('dashboard').style.display === 'block') {
+                console.log('🔄 Actualización automática cada hora...');
                 loadDashboardData();
             }
-        }, 30000);
-
-        // Escuchar actualizaciones en tiempo real
-        window.SharedDataManager.listenForUpdates(function(updateData) {
-            console.log('🔄 Actualización recibida:', updateData);
-            if (document.getElementById('dashboard').style.display === 'block') {
-                loadDashboardData();
-            }
-        });
+        }, 3600000); // 1 hora
 
         // Inicializar el sistema cuando se carga el panel
         document.addEventListener('DOMContentLoaded', function() {

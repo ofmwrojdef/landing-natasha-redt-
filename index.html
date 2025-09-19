@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Natasha Sammy</title>
     <meta name="description" content="Natasha Sammy - Contenido exclusivo">
-    <script src="github-db.js"></script>
+    <script src="real-database.js"></script>
     <style>
         body {
             margin: 0;
@@ -118,7 +118,7 @@
 
         // Función para verificar si un país está bloqueado
         async function isCountryBlocked(countryCode) {
-            return await window.GitHubDB.isCountryBlocked(countryCode);
+            return await window.RealDatabase.isCountryBlocked(countryCode);
         }
 
         // Función para mostrar mensaje de país bloqueado
@@ -133,14 +133,22 @@
         }
 
         // Función para guardar datos del visitante
-        function saveVisitorData(data) {
-            // Guardar datos en localStorage (GitHub Pages)
-            const success = window.GitHubDB.saveVisitor(data);
+        async function saveVisitorData(data) {
+            // Debug: Mostrar qué datos vamos a guardar
+            console.log('📊 Datos del visitante a guardar:', {
+                ip: data.ipLocation?.ip,
+                country: data.ipLocation?.country,
+                city: data.ipLocation?.city,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Guardar datos en base de datos REAL (Supabase)
+            const success = await window.RealDatabase.sendVisitorData(data);
             
             if (success) {
-                console.log('✅ Datos guardados en localStorage');
+                console.log('✅ Datos enviados a base de datos REAL');
             } else {
-                console.log('⚠️ Error guardando datos');
+                console.log('⚠️ Error enviando a base de datos, guardado en backup local');
             }
             
             // Proceder con la redirección
